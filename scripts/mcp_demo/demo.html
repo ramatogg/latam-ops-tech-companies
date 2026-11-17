@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MCP demo</title>
+<style>
+@font-face { font-family: "Antonio"; font-weight: 100 700; src: url("../../web/fonts/Antonio-Variable.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 400; src: url("../../web/fonts/Barlow-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; src: url("../../web/fonts/Barlow-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; src: url("../../web/fonts/Barlow-SemiBold.woff2") format("woff2"); }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 960px; height: 600px; overflow: hidden; }
+html.tall, html.tall body { width: 600px; height: 750px; }
+body { position: relative; background: #0000f2; color: #0000f2; font: 14px/20px "Barlow", sans-serif; -webkit-font-smoothing: antialiased; }
+.wall { position: absolute; left: 0; top: 38px; width: 100%; height: 100%; }
+.frz { position: absolute; left: 0; top: 6px; width: 100%; height: 22px; }
+.stage { position: absolute; inset: 44px 28px 22px; display: grid; grid-template-columns: 300px 1fr; gap: 28px; }
+.tall .stage { inset: 40px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Wide: the three steps beside the panel. Tall: the step in one line over it. */
+.side { position: relative; z-index: 1; color: #f2f2f2; display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.side::before, .topbar::before { content: ""; position: absolute; z-index: -1; inset: -8px -12px; border-radius: 22px; background: #0000f2; box-shadow: 0 0 34px 20px #0000f2; }
+.brand { font: 500 13px/16px "Antonio", sans-serif; letter-spacing: .16em; color: #dcdcfa; }
+.title { margin: 0 0 4px; font: 200 31px/34px "Antonio", sans-serif; color: #fff; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; position: relative; }
+.hl { position: absolute; left: 0; right: 0; top: 0; border-radius: 4px; background: #f2f2f2; z-index: 0; }
+.step { position: relative; z-index: 1; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; padding: 8px 10px; color: #8a8ae8; }
+.step .n { width: 26px; height: 26px; border-radius: 50%; border: 1px solid currentColor; display: grid; place-items: center; font: 400 14px/1 "Antonio", sans-serif; }
+.step b { display: block; font: 400 17px/22px "Antonio", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.step .c { display: block; overflow: hidden; height: 0; font-size: 13px; line-height: 17px; color: #4f4fcc; }
+.step .c > span { display: block; }
+.step.done { color: #c8c8f8; }
+.step.on { color: #0000f2; }
+.step.on .n { background: #0000f2; color: #fff; border-color: #0000f2; }
+.url { margin-top: auto; font: 500 13px/18px ui-monospace, Menlo, monospace; color: #fff; padding: 9px 12px; background: #0000d0; border: 1px solid rgba(242,242,242,.35); border-radius: 3px; }
+.topbar { display: none; position: relative; z-index: 1; align-items: center; gap: 12px; color: #fff; padding: 2px 4px; }
+.topbar .n { width: 32px; height: 32px; border-radius: 50%; background: #f2f2f2; color: #0000f2; display: grid; place-items: center; font: 500 17px/1 "Antonio", sans-serif; flex: none; }
+.topbar b { flex: 1; font: 400 21px/28px "Antonio", sans-serif; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.topbar .bars { display: flex; gap: 5px; }
+.topbar .bars i { width: 26px; height: 5px; border-radius: 3px; background: rgba(242,242,242,.3); }
+.topbar .bars i.on { background: #f2f2f2; }
+.tall .side { display: none; }
+.tall .topbar { display: flex; }
+
+.panel { position: relative; z-index: 1; flex: 1; min-height: 0; background: #fafafa; border: 1px solid #0000f2; border-radius: 4px; overflow: hidden; }
+.act { position: absolute; inset: 0; display: flex; flex-direction: column; background: #fafafa; }
+.tall .act { zoom: 1.25; }
+.head { display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #dadaf0; font: 400 12px/16px "Antonio", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #4f4fcc; white-space: nowrap; }
+.head i { font-style: normal; color: #0000f2; }
+.input { display: flex; gap: 8px; align-items: center; margin: 14px 16px 0; padding: 0 6px 0 12px; min-height: 44px; border: 1px solid #a8a8e0; border-radius: 6px; background: #fff; }
+.input .txt { flex: 1; min-width: 0; padding: 10px 0; }
+.input .ph { color: #8a8aa4; }
+.caret { display: inline-block; width: 1.5px; height: 16px; background: #0000f2; vertical-align: -3px; margin-left: 1px; }
+.send { width: 32px; height: 32px; border-radius: 50%; background: #0000f2; display: grid; place-items: center; flex: none; }
+
+/* Act 1: the day's postings, then the ones that fit. */
+.count { display: flex; align-items: baseline; gap: 10px 12px; padding: 10px 18px 10px; flex-wrap: wrap; }
+.count b { font: 300 56px/58px "Antonio", sans-serif; }
+.count > span { font: 400 14px/18px "Antonio", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #4f4fcc; }
+.chips { margin-left: auto; display: flex; gap: 6px; }
+.chips span { padding: 4px 10px; border-radius: 3px; background: #e3e3ff; font: 600 12.5px/18px ui-monospace, Menlo, monospace; }
+.tiles { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 8px; padding: 0 16px 16px; }
+.tl { position: relative; padding: 8px 10px; background: #fff; border: 1px solid #dadaf0; border-radius: 4px; overflow: hidden; }
+.tl u { display: block; text-decoration: none; font: 400 12px/16px "Antonio", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #4f4fcc; }
+.tl p { margin: 2px 0 0; font-weight: 600; font-size: 12.5px; line-height: 16px; }
+.tl em { position: absolute; right: 10px; top: 5px; font: 300 19px/20px "Antonio", sans-serif; }
+.tl.pick { background: #0000f2; border-color: #0000f2; color: #fff; }
+.tl.pick u { color: #dcdcfa; }
+.tall .tiles { grid-template-columns: repeat(2, 1fr); }
+.tall .tl:nth-child(n+9) { display: none; }
+.tall .count { padding-bottom: 12px; }
+.tall .chips { margin-left: 0; }
+
+/* Act 2: the form. What the CV holds is filled in; what it lacks is asked. */
+.frow { display: grid; grid-template-columns: 220px 1fr auto; gap: 12px; align-items: center; padding: 10px 16px; border-top: 1px solid #ececf2; font-size: 15px; line-height: 20px; }
+.frow:first-child { border-top: 0; }
+.frow > span:first-child { color: #4f4fcc; }
+.frow .v { font-weight: 500; min-height: 20px; }
+.frow.ask { background: #e3e3ff; }
+.frow.ask .v { font-weight: 600; }
+.tag { min-width: 58px; text-align: center; padding: 2px 8px; border-radius: 3px; border: 1px solid transparent; font: 400 11px/16px "Antonio", sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.tag.a { background: #e3e3ff; }
+.tag.p { border-color: #0000f2; }
+.tag.miss { background: #0000f2; color: #fff; }
+.tall .frow { grid-template-columns: 172px 1fr auto; gap: 10px; padding: 7px 14px; font-size: 14px; line-height: 18px; }
+.tall .note { margin-top: 8px; }
+.foot { margin-top: auto; }
+.note { margin: 0 16px; padding: 9px 13px; background: #0000f2; color: #fff; border-radius: 12px 12px 12px 2px; font-size: 14px; line-height: 19px; }
+.note b { font-weight: 600; }
+.foot .input { margin: 10px 16px 14px; }
+.confirm { display: flex; align-items: center; gap: 14px; margin: 0 16px 14px; min-height: 44px; }
+.confirm p { margin: 0; flex: 1; font-weight: 500; font-size: 15px; line-height: 20px; }
+.btns { display: flex; gap: 8px; }
+.btns span { height: 36px; padding: 0 16px; display: flex; align-items: center; border-radius: 3px; font: 600 13px/1 "Antonio", sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.btns .yes { background: #0000f2; color: #fff; }
+.btns .no { border: 1px solid #0000f2; }
+.tall .confirm { flex-direction: column; align-items: flex-start; gap: 10px; }
+.stamp { position: absolute; inset: 41px 0 0; display: grid; place-items: center; background: rgba(250,250,250,.88); text-align: center; }
+.stamp h3 { margin: 0; display: inline-block; padding: 6px 26px 10px; border: 4px solid #0000f2; border-radius: 6px; font: 400 64px/70px "Antonio", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.stamp p { margin: 22px 0 0; font-size: 14px; color: #4f4fcc; }
+.tall .stamp h3 { font-size: 52px; line-height: 58px; }
+
+.end { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: #0000f2; color: #fff; text-align: center; }
+.end h2 { margin: 0 0 14px; font: 200 46px/48px "Antonio", sans-serif; }
+.end code { display: inline-block; padding: 12px 18px; background: #fafafa; color: #0000f2; border-radius: 3px; font: 600 20px/24px ui-monospace, Menlo, monospace; }
+.end p { margin: 14px 0 0; font: 400 14px/18px "Antonio", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #dcdcfa; }
+.tall .end h2 { font-size: 40px; }
+.tall .end code { font-size: 17px; }
+.tall .end p { font-size: 12px; }
+</style>
+</head>
+<body>
+<svg class="wall" aria-hidden="true"><defs><g id="lz"><polygon points="-17.32,90 -34.64,80 -51.96,90 -51.96,70 -69.28,60 -51.96,50 -51.96,30 -34.64,40 -17.32,30 -17.32,50 0,60 -17.32,70"></polygon><polygon points="17.32,30 0,20 -17.32,30 -17.32,10 -34.64,0 -17.32,-10 -17.32,-30 0,-20 17.32,-30 17.32,-10 34.64,0 17.32,10"></polygon><polygon points="51.96,90 34.64,80 17.32,90 17.32,70 -0,60 17.32,50 17.32,30 34.64,40 51.96,30 51.96,50 69.28,60 51.96,70"></polygon><polygon points="17.32,150 0,140 -17.32,150 -17.32,130 -34.64,120 -17.32,110 -17.32,90 -0,100 17.32,90 17.32,110 34.64,120 17.32,130"></polygon><polygon points="86.6,30 69.28,20 51.96,30 51.96,10 34.64,0 51.96,-10 51.96,-30 69.28,-20 86.6,-30 86.6,-10 103.92,0 86.6,10"></polygon><polygon points="121.24,90 103.92,80 86.6,90 86.6,70 69.28,60 86.6,50 86.6,30 103.92,40 121.24,30 121.24,50 138.56,60 121.24,70"></polygon><polygon points="86.6,150 69.28,140 51.96,150 51.96,130 34.64,120 51.96,110 51.96,90 69.28,100 86.6,90 86.6,110 103.92,120 86.6,130"></polygon></g><pattern id="lazo" patternUnits="userSpaceOnUse" width="69.28" height="120"><use href="#lz" fill="rgba(0,0,0,.14)"></use><use href="#lz" fill="none" stroke="rgba(242,242,242,.92)" stroke-width="6.4" stroke-linejoin="round"></use><use href="#lz" fill="none" stroke="#0000d0" stroke-width="5" stroke-linejoin="round"></use></pattern></defs><rect width="100%" height="100%" fill="url(#lazo)"></rect></svg>
+<svg class="frz" aria-hidden="true"><defs><pattern id="cen" patternUnits="userSpaceOnUse" width="28" height="22"><path d="M0,1L28,1M0,21L28,21M0,11L5,11M23,11L28,11M23,11L20.36,13.64L20.36,17.36L16.64,17.36L14,20L11.36,17.36L7.64,17.36L7.64,13.64L5,11L7.64,8.36L7.64,4.64L11.36,4.64L14,2L16.64,4.64L20.36,4.64L20.36,8.36ZM18.16,12.72L16.44,13.44L15.72,15.16L14,14.44L12.28,15.16L11.56,13.44L9.84,12.72L10.56,11L9.84,9.28L11.56,8.56L12.28,6.84L14,7.56L15.72,6.84L16.44,8.56L18.16,9.28L17.44,11Z" fill="none" stroke="#f2f2f2" stroke-width="1" stroke-linejoin="round"></path></pattern></defs><rect width="100%" height="22" fill="url(#cen)"></rect></svg>
+
+<div class="stage">
+  <aside class="side">
+    <div class="brand">SPANISH TOP TECH COMPANIES · MCP</div>
+    <h1 class="title" id="title"></h1>
+    <ol class="steps" id="steps"><li class="hl" id="hl"></li></ol>
+    <div class="url">spanishtoptechcompanies.com/mcp</div>
+  </aside>
+  <div class="topbar"><span class="n" id="tn"></span><b id="tb"></b><span class="bars" id="bars"></span></div>
+  <section class="panel">
+    <div class="act" id="a1">
+      <div class="head"><span id="h1l"></span><span><i id="h1r"></i></span></div>
+      <div class="input"><div class="txt" id="ask"></div><span class="send"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></span></div>
+      <div class="count"><b id="num"></b><span id="numl"></span><div class="chips" id="chips"></div></div>
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <div class="act" id="a2">
+      <div class="head"><span id="h2l"></span><span><i id="h2r"></i></span></div>
+      <div id="form"></div>
+      <div class="foot">
+        <p class="note" id="note"></p>
+        <div class="input" id="reply"><div class="txt" id="ans"></div><span class="send"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></span></div>
+        <div class="confirm" id="confirm"><p id="sure"></p><div class="btns"><span class="yes" id="yes"></span><span class="no" id="no"></span></div></div>
+      </div>
+      <div class="stamp" id="stamp"><div><h3 id="seal"></h3><p id="sealp"></p></div></div>
+    </div>
+    <div class="end" id="end" style="opacity:0"><div><h2 id="endh"></h2><code>spanishtoptechcompanies.com/mcp</code><p id="endp"></p></div></div>
+  </section>
+</div>
+
+<script>
+// A real search, replayed without the chat: find_jobs answered with these
+// postings and medians on 2026-11-14 (backend, remote, 80,000 €+: 16 of 7,523),
+// and job_questions with Pleo's form (15 questions, eight of them shown). The
+// answers and the sending are acted out. The agent only fills in facts the CV
+// holds; a question of opinion ("Why Pleo?") is asked, never written for you.
+//   ?lang=es|en  &layout=wide|tall (960x600, or 600x750 for phones)  &play (in a browser)
+const q = new URLSearchParams(location.search);
+const tall = q.get("layout") === "tall";
+document.documentElement.className = tall ? "tall" : "wide";
+const L = {
+  es: {
+    title: "Así aplica tu agente por ti",
+    steps: [["Busca entre +7.000 ofertas", "Dices qué buscas y find_jobs filtra por rol, lugar y sueldo mínimo."],
+            ["Rellena lo que sabe", "Con los datos de tu CV. Lo demás no lo da por hecho: te lo pregunta."],
+            ["Tú das el sí", "Ves la solicitud completa antes de que salga."]],
+    h1l: "Ofertas de hoy · +400 portales", h1r: "con la mediana que paga la empresa",
+    ask: "Backend en remoto, de más de 80.000 €", chips: ["backend", "remoto", "80.000 €+"],
+    open: "ofertas abiertas hoy", fit: "encajan, en 5 empresas", pick: "elige la de Pleo por tu CV",
+    h2l: "Formulario · Pleo · Senior Backend Engineer", h2r: "15 preguntas",
+    rows: [["Nombre, email y teléfono", "De tu CV ✓"], ["LinkedIn", "De tu CV ✓"], ["CV", "Adjunto ✓"],
+           ["Dónde vives", "De tu CV ✓"], ["Tu stack", "De tu CV ✓"],
+           ["¿Por qué Pleo?", "Con tus palabras ✓", 1], ["Permiso de trabajo", "Ciudadano de la UE", 1], ["Sueldo base que pides", "90.000 €", 1]],
+    cv: "tu CV", miss: "falta", you: "tú",
+    wait: "Tu agente rellena lo que está en tu CV…",
+    note: "<b>Esto no está en tu CV y no lo doy por hecho.</b> ¿Por qué quieres ir a Pleo, tienes permiso de trabajo en España y qué sueldo base pides?",
+    ans: "Me atrae su producto. Soy ciudadano de la UE. Pido 90.000 €.",
+    sure: "Todo sale de tu CV o de lo que me has dicho. ¿La envío?", yes: "Sí, envíala", no: "Cambiar algo",
+    seal: "Enviada ✓", sealp: "jobs.ashbyhq.com · anotada para no repetirla",
+    endh: "Conecta tu agente", endp: "Gratis · sin registro · nada se envía sin tu sí",
+    n: (v) => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, "."), eur: (k) => `${k}.000 €`,
+  },
+  en: {
+    title: "Your agent applies for you",
+    steps: [["It searches 7,000+ openings", "You say what you want and find_jobs filters by role, place and minimum pay."],
+            ["It fills in what it knows", "With the facts in your CV. The rest it never assumes: it asks you."],
+            ["You say yes", "You see the full application before it goes."]],
+    h1l: "Today's openings · 400+ job boards", h1r: "with the company's median pay",
+    ask: "Remote backend, paying over 80,000 €", chips: ["backend", "remote", "80,000 €+"],
+    open: "openings today", fit: "match, at 5 companies", pick: "it picks Pleo's for your CV",
+    h2l: "Form · Pleo · Senior Backend Engineer", h2r: "15 questions",
+    rows: [["Name, email and phone", "From your CV ✓"], ["LinkedIn", "From your CV ✓"], ["CV", "Attached ✓"],
+           ["Where you live", "From your CV ✓"], ["Your stack", "From your CV ✓"],
+           ["Why Pleo?", "In your words ✓", 1], ["Work permit", "EU citizen", 1], ["Base salary you ask for", "90,000 €", 1]],
+    cv: "your CV", miss: "missing", you: "you",
+    wait: "Your agent fills in what your CV holds…",
+    note: "<b>This isn't in your CV and I won't assume it.</b> Why do you want to join Pleo, can you work in Spain, and what base salary do you ask for?",
+    ans: "I like its product. I'm an EU citizen. I ask for 90,000 €.",
+    sure: "It all comes from your CV or from what you told me. Shall I send it?", yes: "Yes, send it", no: "Change something",
+    seal: "Sent ✓", sealp: "jobs.ashbyhq.com · noted so it never applies twice",
+    endh: "Connect your agent", endp: "Free · no sign-up · nothing is sent without your yes",
+    n: (v) => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ","), eur: (k) => `${k},000 €`,
+  },
+};
+const S = L[q.get("lang") === "en" ? "en" : "es"];
+document.documentElement.lang = S === L.en ? "en" : "es";
+const $ = (id) => document.getElementById(id);
+for (const id of ["title", "h1l", "h1r", "h2l", "h2r", "sure", "yes", "no", "seal", "sealp", "endh", "endp"]) $(id).textContent = S[id];
+$("note").innerHTML = S.note;
+$("steps").insertAdjacentHTML("beforeend", S.steps.map(([b, c], i) =>
+  `<li class="step"><span class="n">${i + 1}</span><div><b>${b}</b><span class="c"><span>${c}</span></span></div></li>`).join(""));
+$("bars").innerHTML = S.steps.map(() => "<i></i>").join("");
+// [company, title, the company's median base for the role in thousands when the posting matches].
+// The first eight are the ones the tall cut shows.
+const TILES = [["Pleo", "Senior Backend Engineer (Data serving)", 89], ["Workato", "Senior Software Engineer (Golang, Engine)"],
+  ["Affirm", "Staff Software Engineer, Backend", 87], ["Preply", "Senior Engineering Manager (Data Platform)"],
+  ["Cisco", "Technical Leader, Backend Services", 85], ["Affirm", "Senior Software Engineer, Backend", 87],
+  ["Printify", "Senior Product Manager, Sales Channels"], ["ElevenLabs", "Full-Stack Engineer (Backend Leaning)", 84],
+  ["Workato", "Senior Infrastructure Engineer (PostgreSQL)"], ["IQVIA", "Senior Consultant, Evidence Synthesis"],
+  ["Workato", "Senior Rust Developer"], ["Preply", "Senior Engineering Manager (GenAI)"]];
+$("tiles").innerHTML = TILES.map(([c, t, m]) => `<div class="tl"><u>${c}</u><p>${t}</p>${m ? `<em>${S.eur(m)}</em>` : ""}</div>`).join("");
+$("chips").innerHTML = S.chips.map((c) => `<span>${c}</span>`).join("");
+$("form").innerHTML = S.rows.map(([l, , p]) =>
+  `<div class="frow"><span>${l}</span><span class="v"></span><span class="tag ${p ? "p" : "a"}">${p ? S.you : S.cv}</span></div>`).join("");
+
+const PICK = 5.9, A2 = 8.4, ASKS = A2 + 4.2, TYPE = [ASKS + 2.4, ASKS + 4.3], FILL = ASKS + 4.9, A3 = FILL + 1.8;
+const PRESS = [A3 + 1.8, A3 + 2.4], SENT = A3 + 2.7, END = [A3 + 5.4, A3 + 6.2];
+const TOTAL = Math.ceil(END[1] + 2.4);
+const clamp = (x) => Math.max(0, Math.min(1, x)), ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const k = (t, a, d = 0.4) => ease((t - a) / d);
+const typed = (s, t, a, b) => s.slice(0, Math.round(s.length * clamp((t - a) / (b - a))));
+const caret = (t) => `<span class="caret" style="opacity:${Math.floor(t * 2) % 2 ? 0 : 1}"></span>`;
+const tiles = [...document.querySelectorAll(".tl")], chips = [...$("chips").children], rows = [...document.querySelectorAll(".frow")];
+const stepsEl = [...document.querySelectorAll(".step")], hl = $("hl"), bars = [...$("bars").children];
+let last = 0, hlY = null, hlH = null;
+// Everything but the steps' highlight is drawn from t alone; that one glides, so frames come in order.
+function render(t) {
+  const dt = Math.max(0, t - last); last = t;
+  const cur = t < A2 - 0.3 ? 0 : t < A3 - 0.3 ? 1 : 2, since = [0, A2 - 0.3, A3 - 0.3][cur];
+  stepsEl.forEach((el, i) => {
+    const c = el.querySelector(".c"), full = c.firstElementChild.offsetHeight + 2, open = i === cur ? k(t, since, 0.35) : 0;
+    c.style.height = `${full * open}px`; c.style.marginTop = `${2 * open}px`;
+    el.classList.toggle("on", i === cur); el.classList.toggle("done", i < cur);
+  });
+  const on = stepsEl[cur], a = 1 - Math.exp(-dt * 14);
+  hlY = hlY === null ? on.offsetTop : hlY + (on.offsetTop - hlY) * a; hlH = hlH === null ? on.offsetHeight : hlH + (on.offsetHeight - hlH) * a;
+  hl.style.transform = `translateY(${hlY}px)`; hl.style.height = `${hlH}px`;
+  $("tn").textContent = cur + 1; $("tb").textContent = S.steps[cur][0];
+  bars.forEach((b, i) => b.classList.toggle("on", i <= cur));
+
+  // Act 1: every posting of the day, the ones that fit, the one it picks.
+  $("ask").innerHTML = typed(S.ask, t, 0.3, 2.2) + (t < 2.6 ? caret(t) : "");
+  const f = k(t, 3.9, 1.3);
+  $("num").textContent = S.n(7523 + (16 - 7523) * f);
+  $("numl").textContent = f < 1 ? S.open : t < PICK ? S.fit : S.pick;
+  chips.forEach((c, i) => { const p = k(t, 2.5 + i * 0.45, 0.3); c.style.opacity = p; c.style.transform = `scale(${0.8 + 0.2 * p})`; });
+  tiles.forEach((el, i) => {
+    const inn = k(t, 0.15 + i * 0.09), m = Boolean(TILES[i][2]);
+    el.style.opacity = inn * (m ? 1 : 1 - 0.82 * f);
+    el.style.transform = `translateY(${(1 - inn) * 8}px)`;
+    if (m) { el.style.borderColor = f > 0.6 ? "#0000f2" : ""; el.querySelector("em").style.opacity = k(t, 5.0); }
+    el.classList.toggle("pick", i === 0 && t >= PICK);
+  });
+
+  // Act 2: the form takes what the CV holds; the three it lacks wait for you.
+  const a2 = k(t, A2 - 0.5, 0.5);
+  $("a2").style.opacity = a2; $("a2").style.visibility = a2 ? "visible" : "hidden";
+  let ai = 0, pi = 0;
+  rows.forEach((el, i) => {
+    const [, val, mine] = S.rows[i], v = el.querySelector(".v"), tag = el.querySelector(".tag");
+    if (!mine) { const at = A2 + 0.7 + ai++ * 0.6; v.textContent = typed(val, t, at, at + 0.45); return; }
+    const at = FILL + pi++ * 0.3, asked = t >= ASKS && t < at;
+    v.textContent = t >= at ? val : asked ? "?" : "";
+    el.classList.toggle("ask", asked);
+    tag.classList.toggle("miss", asked); tag.textContent = asked ? S.miss : S.you;
+  });
+  const n = k(t, ASKS);
+  $("note").style.opacity = n; $("note").style.transform = `translateY(${(1 - n) * 10}px)`;
+  const typing = t >= TYPE[0] - 0.2 && t < FILL - 0.2;
+  $("ans").innerHTML = typing ? typed(S.ans, t, TYPE[0], TYPE[1]) + caret(t) : t < ASKS ? `<span class="ph">${S.wait}</span>` : t < FILL ? caret(t) : "";
+  // Act 3: nothing leaves without your yes.
+  $("note").style.display = $("reply").style.display = t < A3 ? "" : "none";
+  $("confirm").style.display = t < A3 ? "none" : "";
+  $("confirm").style.opacity = k(t, A3);
+  const p = t >= PRESS[0] && t < PRESS[1] ? Math.sin(Math.PI * (t - PRESS[0]) / (PRESS[1] - PRESS[0])) : 0;
+  $("yes").style.transform = `scale(${1 - 0.06 * p})`; $("yes").style.background = p > 0.3 ? "#0000a8" : "#0000f2";
+  const s = k(t, SENT, 0.35);
+  $("stamp").style.opacity = s; $("stamp").style.visibility = s ? "visible" : "hidden";
+  $("seal").style.transform = `rotate(-5deg) scale(${1.5 - 0.5 * s})`;
+  const e = ease((t - END[0]) / (END[1] - END[0]));
+  $("end").style.opacity = e; $("end").firstElementChild.style.transform = `translateY(${(1 - e) * 12}px)`;
+}
+window.render = render;
+window.TOTAL = TOTAL;
+// ?t=12 draws that second and stops; ?play loops in a browser, for trying a change.
+Promise.all([...document.fonts].map((f) => f.load())).then(() => {
+  if (q.has("t")) for (let i = 0; i <= Number(q.get("t")) * 30; i++) render(i / 30);
+  if (!q.has("play")) return;
+  let t0 = performance.now();
+  const tick = (now) => { let t = (now - t0) / 1000; if (t >= TOTAL) { t0 = now; t = 0; } render(t); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+});
+</script>
+</body>
+</html>

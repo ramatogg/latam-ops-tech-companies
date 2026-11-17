@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "python3 scripts/site.py && node scripts/jobs.mjs",
+  "outputDirectory": "_site",
+  "regions": ["fra1"],
+  "git": { "deploymentEnabled": false },
+  "redirects": [
+    { "source": "/", "destination": "/es/", "permanent": false },
+    { "source": "/:lang(es|en)", "destination": "/:lang/", "permanent": true },
+    { "source": "/:lang(es|en)/:path((?:[^/.]+/)*[^/.]+)", "destination": "/:lang/:path/", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/ingest/static/:path(.*)", "destination": "https://eu-assets.i.posthog.com/static/:path" },
+    { "source": "/ingest/array/:path(.*)", "destination": "https://eu-assets.i.posthog.com/array/:path" },
+    { "source": "/ingest/:path(.*)", "destination": "https://eu.i.posthog.com/:path" },
+    { "source": "/api/v1/boards.json", "destination": "/api/v1/boards-list.json" },
+    { "source": "/star", "destination": "/api/star" },
+    { "source": "/star/:via", "destination": "/api/star?via=:via" },
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/mcp/", "destination": "/api/mcp" }
+  ],
+  "headers": [
+    {
+      "source": "/api/v1/(.*)",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+    },
+    {
+      "source": "/(llms\\.txt|llms-full\\.txt)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" }
+      ]
+    }
+  ]
+}

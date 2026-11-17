@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+*.tmp
+_site/*
+!_site/api/
+_site/api/*
+!_site/api/v1/
+_site/api/v1/companies/
+.cache/
+.vercel/
+node_modules
+.env
+# One row per person: private, kept outside the repository (lib.DATA).
+companies.csv
+test-results/
